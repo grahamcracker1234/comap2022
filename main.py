@@ -72,6 +72,12 @@ def simulate(data, commission_rate, wallet, action_model):
     action = Sell(currency_rate, commission_rate, Currency(0, wallet.btc, wallet.gold))
     return wallet.usd + action.usd
 
+# Buy both and hold
+def null_action(day, stream_history, commission_rate, wallet) -> Action:
+    currency_rate = get_currency_rate(stream_history)
+    if np.isnan(currency_rate.btc) or np.isnan(currency_rate.gold) or wallet.usd == 0: return Hold()
+    return Buy(currency_rate, commission_rate, Currency(0, wallet.usd / 2, wallet.usd / 2))
+
 # Buy bitcoin and hold
 def null_action_btc(day, stream_history, commission_rate, wallet) -> Action:
     currency_rate = get_currency_rate(stream_history)
@@ -89,7 +95,7 @@ def main():
     commission_rate = Currency(1, 0.02, 0.01)
     wallet = Currency(1000, 0, 0)
     
-    portfolio_worth = simulate(data, commission_rate, wallet, null_action_btc)
+    portfolio_worth = simulate(data, commission_rate, wallet, null_action)
     print(f"Total USD: ${round(portfolio_worth, 2)}")
     
 main()
