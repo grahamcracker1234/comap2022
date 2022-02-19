@@ -2,6 +2,7 @@ import pandas as pd
 import numpy as np
 from dataclasses import dataclass
 
+TRADES = []
 @dataclass
 class Currency:
     usd: float = 0
@@ -21,7 +22,7 @@ class Buy(Action):
         if not np.isnan(currency_rate.gold):
             self.gold = currency_to_buy_in_usd.gold * (1 - commission_rate.gold) / currency_rate.gold
             self.usd += currency_to_buy_in_usd.gold
-        
+        TRADES.append("BUY")
 @dataclass
 class Sell(Action):
     def __init__(self, currency_rate: Currency, commission_rate: Currency, currency_to_sell: Currency) -> None:
@@ -32,7 +33,7 @@ class Sell(Action):
         if not np.isnan(currency_rate.gold):
             self.gold = currency_to_sell.gold
             self.usd += (currency_rate.gold * currency_to_sell.gold) * (1 - commission_rate.gold)
-        
+        TRADES.append("SELL")
 @dataclass
 class Hold(Action): pass
 
@@ -78,7 +79,6 @@ def simulate(data, commission_rate, portfolio, action_model):
             portfolio.usd += action.usd
             portfolio.btc -= action.btc
             portfolio.gold -= action.gold
-
     return get_portfolio_worth(data, commission_rate, portfolio)
 
 # Buy both and hold
@@ -99,12 +99,30 @@ def null_action_gold(day, stream_history, commission_rate, portfolio) -> Action:
     if portfolio.usd == 0: return Hold()
     return Buy(currency_rate, commission_rate, Currency(0, 0, portfolio.usd))    
 
+
+def policyFunction(Q, epsilon, actions):
+    def policy_function(state):
+        action_probs = np.ones(len(actions)) * epsilon / len(actions)
+        best_action = np.argmax(Q[state])
+        action_probs[best_action] += epsilon / len(actions)
+        return action_probs
+    return policy_function
+
+
+def step(state, action_function):
+    action_probs = action_function(state)
+    action = np.random.choice(np.arange(len(action_probs)), p=action_probs)
+    next_state = action_function(action_function(state))
+    return next_state
+
+
 def main():
     data = pd.read_csv("data/full.csv")
     commission_rate = Currency(1, 0.02, 0.01)
     portfolio = Currency(1000, 0, 0)
     
-    portfolio_worth = simulate(data, commission_rate, portfolio, null_action)
+    portfolio_worth = simulate(data, commission_rate, portfolio, null_action_gold)
     print(f"Total USD: ${round(portfolio_worth, 2)}")
     
-main()
+if __name__ == "__main__":
+    main()
