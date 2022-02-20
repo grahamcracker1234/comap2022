@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from readData import openFile
+from readData import openFile, getValuesOnly
+from forcasting import forcast_attempt
 
 class Brownian():
     """
@@ -139,23 +140,64 @@ def predict_final_stock_price(stock_value, volatility, num_weeks, num_scenarios)
 
     return final_prediction
 
-def volatility(data):
+def volatility(data, day_num):
     # this is a function that will define the volatility
     # it will look at previous data and analyze it
+    data = data[:day_num]
     data = (data - np.min(data)) / (np.max(data) - np.min(data))
-    sigma = ((np.std(data))**2)*10
+    sigma = np.std(data)
+    variance = sigma**2
+    # print((sigma*2.6)+variance)
+    return sigma*3 + variance
+
+def volatility_complex(data, day_num):
+    # use the data from the previous days until today
+    data = data[:day_num+1]
+    # get the sum of stock returns squared
+    price_today = data[day_num]
+    returns_squared = [(price_today - data[i])**2 for i in range(len(data))]
+    sum_returns_squared = sum(returns_squared)
+    sigma = np.sqrt((252/len(returns_squared)-1) * sum_returns_squared)
     return sigma
 
-def simulate_prediction():
+def simulate_prediction(data, day_num):
     # simulates the prediction
-    rows = openFile("data/bitcoin_data.csv")
-    data = []
-    for i in range(len(rows)):
-        data.append(rows[i][1])
-    sigma = volatility(data)
+    sigma = volatility(data, day_num)
     # the parameters can change in terms of number of weeks to check 
     # the num of scenarios will also change and it will eventually lead to the
     # natural distribution of the brownian motion
-    stock_prices = predict_final_stock_price(stock_value=rows[0][1], volatility=sigma, num_weeks=14, num_scenarios=5)
-    plt.plot(stock_prices)
-    plt.show()
+    stock_prices_f = predict_final_stock_price(stock_value=data[day_num], volatility=sigma, num_weeks=5, num_scenarios=5)
+    # this tries to use the forcast model to predict the 
+    # values_use_to_predict = data[:day_num]
+    # values_use_to_predict.extend(stock_prices_f)
+    # print(len(values_use_to_predict))
+    return stock_prices_f
+
+def simulation_calculation(data, day_num):
+    # get the prediction average
+    stock_price_predictions_days_average = []
+    for i in range(10):
+        stock_price_predictions_days = simulate_prediction(data, day_num)
+        stock_price_predictions_days_average.append(stock_price_predictions_days)
+        
+    # getting the average stock price predictions for the future (next 100 days)
+    final_stock_prediction_days = []
+    for i in range(len(stock_price_predictions_days_average[0])):
+        values = []
+        for j in range(len(stock_price_predictions_days_average)):
+            values.append(stock_price_predictions_days_average[j][i])
+        final_stock_prediction_days.append(np.mean(values))
+    return final_stock_prediction_days
+
+def simulateAllDays():
+
+    rows = openFile("data/btc.csv")
+    data = getValuesOnly(rows)
+    all_predictions = []
+    for day_num in range(1, len(data)-50, 50):
+        stock_prediction_days = simulation_calculation(data, day_num)
+        all_predictions.extend(stock_prediction_days)
+    plt.plot(data)
+    plt.plot(all_predictions)
+    plt.show() 
+

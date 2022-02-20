@@ -13,3 +13,9 @@ def openFile(filePath):
         rows[i] = [rows[i][0], float(rows[i][1])]
     
     return rows
+
+def getValuesOnly(data):
+    for i in range(len(data)):
+        data[i] = data[i][1]
+
+    return data
