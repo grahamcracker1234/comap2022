@@ -1,4 +1,5 @@
 import numpy as np
+import pandas as pd
 import matplotlib.pyplot as plt
 from readData import openFile, getValuesOnly
 from forcasting import forcast_attempt
@@ -155,9 +156,9 @@ def volatility_complex(data, day_num):
     data = data[:day_num+1]
     # get the sum of stock returns squared
     price_today = data[day_num]
-    returns_squared = [(price_today - data[i])**2 for i in range(len(data))]
-    sum_returns_squared = sum(returns_squared)
-    sigma = np.sqrt((252/len(returns_squared)-1) * sum_returns_squared)
+    returns = [((data[i] - data[i-1])/data[i-1]) for i in range(1,len(data))]
+    miu = np.mean(returns)
+    sigma = np.std(returns)
     return sigma
 
 def simulate_prediction(data, day_num):
@@ -167,10 +168,6 @@ def simulate_prediction(data, day_num):
     # the num of scenarios will also change and it will eventually lead to the
     # natural distribution of the brownian motion
     stock_prices_f = predict_final_stock_price(stock_value=data[day_num], volatility=sigma, num_weeks=5, num_scenarios=5)
-    # this tries to use the forcast model to predict the 
-    # values_use_to_predict = data[:day_num]
-    # values_use_to_predict.extend(stock_prices_f)
-    # print(len(values_use_to_predict))
     return stock_prices_f
 
 def simulation_calculation(data, day_num):
@@ -189,10 +186,7 @@ def simulation_calculation(data, day_num):
         final_stock_prediction_days.append(np.mean(values))
     return final_stock_prediction_days
 
-def simulateAllDays():
-
-    rows = openFile("data/btc.csv")
-    data = getValuesOnly(rows)
+def simulateAllDays(data):
     all_predictions = []
     for day_num in range(1, len(data)-50, 50):
         stock_prediction_days = simulation_calculation(data, day_num)
@@ -201,3 +195,8 @@ def simulateAllDays():
     plt.plot(all_predictions)
     plt.show() 
 
+data = pd.read_csv("data/full.csv")
+btc = [float(data.BTC.values[i]) for i in range(len(data))]
+gold = [float(data.GOLD_FULL.values[i]) for i in range(len(data))]
+# print(btc[0])
+simulateAllDays(gold)
