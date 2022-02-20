@@ -52,7 +52,22 @@ def geometric_brownian_motion(data, day_num, horizon_length, num_scenarios):
     # components of the Geometric Brownian Motion
     # -> Long-term trend in the stock_prices --> Drift
     # -> Short-term random fluctuations --> Diffusion
-    # Difussion is what gives the stochastiness to our model
+
+    # Drift:
+    # Long-term trend in stock prices, it is calculated by:
+    # mu - half sigma squared. The importance of drift is that is being use as an exponential equation
+    # for the stock price prediction
+    # this component is constant for each day prediction because mu and sigma does not change
+
+    # Difussion:
+    # Short-term random shockness
+    # the Diffusion component makes it possible to create different stock price prediction scenarios.
+    # Diffusion is what gives the stochastiness to our model.
+    # the diffusion component helps us create as many scenarios as we want since it involves 
+    # Wiener process(It creates independent, stationary and normally distributed random shocks)
+    # Diffusion also helps to decrease monotonus smoothness in increasing or decreasing trends in order to
+    # maintain the random shockness.
+
 
     # assumptions:
     # 1) length of the time period between (k-1) and (k), which is dt, is in line with the historical data frequency. 
