@@ -4,6 +4,35 @@ import matplotlib.pyplot as plt
 from scipy.signal import argrelextrema
 from datetime import datetime
 
+# Generate dataframe column without nan values
+def generate_column(column):
+    new_column = []
+    last_value = np.nan
+    for y in column:
+        if np.isnan(y) and last_value: 
+            new_column.append(last_value)
+            continue
+        
+        if ~np.isnan(y): 
+            last_value = y
+            new_column.append(last_value)
+            continue
+            
+        new_column.append(np.nan)
+    
+    first_value = np.nan
+    first_index = 0
+    for i, y in enumerate(new_column):
+        if np.isnan(y): continue
+        first_value = y
+        first_index = i
+        break
+    
+    for i in range(first_index):
+        new_column[i] = first_value
+        
+    return np.array(new_column)
+        
 
 def nearest_neighbor_smoother(x, y, n):
     smooth = []
@@ -24,17 +53,15 @@ def gaussian_kernel_smoother(x, y, b):
         smooth.append((y * new_xi).sum())
     return np.array(smooth)
 
-
 def main():
-    data = pd.read_csv("data/full.csv", converters={"Date": pd.to_datetime})
+    data = pd.read_csv("data/full.csv", converters={"DATE": pd.to_datetime})
+    np.set_printoptions(threshold=np.inf)
+    plt.plot(data.GOLD_FULL)
 
-    plt.plot(data.BTC)
+    # n_smooth = nearest_neighbor_smoother(data.Date, data.BTC, 20)
+    # plt.plot(n_smooth)
 
-    g_smooth = nearest_neighbor_smoother(data.Date, data.BTC, 20)
-    plt.plot(g_smooth)
-
-    g_smooth = gaussian_kernel_smoother(
-        data.Date[~np.isnan(data.BTC)], data.BTC, 10)
+    g_smooth = gaussian_kernel_smoother(data.DATE, data.GOLD_FULL, 10)
     plt.plot(g_smooth)
 
     max_indices = argrelextrema(g_smooth, np.greater)[0]
