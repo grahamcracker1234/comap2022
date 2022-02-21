@@ -3,6 +3,12 @@ import numpy as np
 import matplotlib.pyplot as plt
 from scipy.signal import argrelextrema
 from datetime import datetime
+from sklearn.kernel_approximation import RBFSampler
+from sklearn import preprocessing
+from timeit import timeit
+from itertools import zip_longest
+
+# from skfda.preprocessing.smoothing
 
 # Generate dataframe column without nan values
 def generate_column(column):
@@ -33,15 +39,25 @@ def generate_column(column):
         
     return np.array(new_column)
         
-
+# Slow
 def nearest_neighbor_smoother(x, y, n):
     smooth = []
     for xi in x:
         xs = ((x - xi).apply(lambda x: x.days) ** 2).sort_values()
-        xs = xs[~np.isnan(y[xs.index])][:n]
-        ys = y[xs.index]
+        ys = y[xs.index][:n]
         smooth.append(ys.sum() / n)
     return np.array(smooth)
+
+# Fast, but wrong width
+# def nearest_neighbor_smoother(x, y, n):
+#     ys = tuple(y[i:] for i in range(n))
+#     smooth = tuple(sum(y) / n for y in zip(*ys))
+#     return np.array(smooth)
+
+# def nearest_neighbor_smoother(x, y, n):
+#     ys = tuple(y[i:] for i in range(n))
+#     smooth = tuple(sum(fy := tuple(filter(lambda yi: ~np.isnan(yi), y))) / len(fy) for y in zip_longest(*ys, fillvalue=np.nan))
+#     return np.array(smooth)
 
 
 def gaussian_kernel_smoother(x, y, b):
@@ -56,20 +72,36 @@ def gaussian_kernel_smoother(x, y, b):
 def main():
     data = pd.read_csv("data/full.csv", converters={"DATE": pd.to_datetime})
     np.set_printoptions(threshold=np.inf)
-    plt.plot(data.GOLD_FULL)
+    x = data.DATE
+    y = data.BTC
+    plt.plot(y)
 
-    # n_smooth = nearest_neighbor_smoother(data.Date, data.BTC, 20)
-    # plt.plot(n_smooth)
+    # n_smooth = nearest_neighbor_smoother(x, y, 300)
+    n_smooth = np.array(pd.DataFrame(y).ewm(halflife="14 days", times=pd.DatetimeIndex(x)).mean().values) #nearest_neighbor_smoother(x, y, 300)
+    plt.plot(n_smooth)
+    print(x.size)
+    print(n_smooth.size)
+    
+    # print(timeit(lambda: nearest_neighbor_smoother(x, y, 250), number=1))
+    
+    # print(y.describe())
+    # norm_y = (y - y.mean()) / y.std()
+    # print(norm_y.describe())
+    # norm_y = (y - y.min()) / (y.max() - y.min())
+    # print(norm_y.describe())
+    # print(norm_y)
 
-    g_smooth = gaussian_kernel_smoother(data.DATE, data.GOLD_FULL, 10)
-    plt.plot(g_smooth)
+    # print(timeit(lambda: nearest_neighbor_smoother(x, y, 50), number=1))
+    # print(timeit(lambda: gaussian_kernel_smoother(x, y, 10), number=1))
+    # g_smooth = gaussian_kernel_smoother(x, y, 10)
+    # plt.plot(g_smooth)
 
-    max_indices = argrelextrema(g_smooth, np.greater)[0]
-    local_max = g_smooth[max_indices]
+    max_indices = argrelextrema(n_smooth, np.greater)[0]
+    local_max = n_smooth[max_indices]
     plt.plot(max_indices, local_max, "ro")
 
-    min_indices = argrelextrema(g_smooth, np.less)[0]
-    local_min = g_smooth[min_indices]
+    min_indices = argrelextrema(n_smooth, np.less)[0]
+    local_min = n_smooth[min_indices]
     plt.plot(min_indices, local_min, "bo")
 
     plt.show()
