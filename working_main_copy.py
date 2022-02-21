@@ -63,11 +63,12 @@ def simulate(data, commission_rate, portfolio, action_model):
         stream_history = data[:day+1]
         
         # Debug output
-        print(f"Day {day}")
-        print(f"Portfolio Worth: ${round(get_portfolio_worth(stream_history, commission_rate, portfolio), 2)}")
-        print(f"\tUSD: {portfolio.usd}")
-        print(f"\tBTC: {portfolio.btc}")
-        print(f"\tGOLD: {portfolio.gold}")
+        # if day % 100 == 0:
+        #     print(f"Day {day}")
+        #     print(f"Portfolio Worth: ${round(get_portfolio_worth(stream_history, commission_rate, portfolio), 2)}")
+        #     print(f"\tUSD: {portfolio.usd}")
+        #     print(f"\tBTC: {portfolio.btc}")
+        #     print(f"\tGOLD: {portfolio.gold}")
         
         # Get action based on action model
         action = action_model(day, stream_history, commission_rate, portfolio)
@@ -108,14 +109,12 @@ def gbm_with_ewm_action(day, stream_history, commission_rate, portfolio) -> Acti
     sell_action = Sell(currency_rate, commission_rate, Currency(0, portfolio.btc, 0))
 
     if day == 0: return buy_action
-    
-    if day % 25 != 0: return
-    
+        
     # currency_rate = get_currency_rate(stream_history)
-    btc_prediction = gbm.geometric_brownian_motion(stream_history.BTC, 100)
+    btc_prediction = gbm.geometric_brownian_motion(stream_history.BTC, 500)
     
     prediction_stream = np.concatenate((stream_history.BTC.values, btc_prediction), axis=None)
-    smooth_stream = ewm(prediction_stream)
+    smooth_stream = ewm(prediction_stream, 10)
     smooth_stream = gks(np.array(list(range(smooth_stream.size))), smooth_stream)
 
     min_indices = argrelextrema(smooth_stream, np.less)[0]
@@ -128,30 +127,31 @@ def gbm_with_ewm_action(day, stream_history, commission_rate, portfolio) -> Acti
     most_recent_past_index = max(filter(lambda i: i <= day, indices), default=None)
     most_recent_future_index = min(filter(lambda i: i > day, indices), default=None)
     
-    # plt.plot(data.BTC)
-    # plt.plot(prediction_stream)
-    # plt.plot(smooth_stream)
-    # plt.plot(max_indices, local_maxes, "ro")
-    # plt.plot(min_indices, local_mins, "bo")
-    # plt.axvline(x=day)
-    # plt.show()
+    # if day % 100 == 0:
+    #     plt.plot(data.BTC)
+    #     plt.plot(prediction_stream)
+    #     plt.plot(smooth_stream)
+    #     plt.plot(max_indices, local_maxes, "ro")
+    #     plt.plot(min_indices, local_mins, "bo")
+    #     plt.axvline(x=day)
+    #     plt.show()
         
     # print(f"{max_indices=}")
     # print(f"{min_indices=}")
     # print(f"{most_recent_past_index=}")
+    if not most_recent_future_index: return Hold()
     
     if most_recent_past_index in min_indices and most_recent_past_index in max_indices: 
         raise Exception("most_recent_past_index is both local_min and local_max")
     
-    buy_action = Buy(currency_rate, commission_rate, Currency(0, portfolio.usd, 0))
     if most_recent_past_index in min_indices:
         min_index = most_recent_past_index
         max_index = most_recent_future_index
         
-        min_value = local_mins[min_index]
-        max_value = local_maxes[max_index]
+        min_value = prediction_stream[min_index]
+        max_value = prediction_stream[max_index]
         
-        if abs(max_value - min_value) / most_recent_future_index < commission_rate.btc:
+        if abs(max_value - min_value) / prediction_stream[most_recent_future_index] < 0.05:
             return Hold()
         return buy_action
     
@@ -159,10 +159,10 @@ def gbm_with_ewm_action(day, stream_history, commission_rate, portfolio) -> Acti
         min_index = most_recent_future_index
         max_index = most_recent_past_index
         
-        min_value = local_mins[min_index]
-        max_value = local_maxes[max_index]
+        min_value = prediction_stream[min_index]
+        max_value = prediction_stream[max_index]
         
-        if abs(max_value - min_value) / most_recent_future_index < commission_rate.btc:
+        if abs(max_value - min_value) / prediction_stream[most_recent_future_index] < 0.05:
             return Hold()
         return sell_action
     
@@ -176,6 +176,8 @@ def gbm_with_ewm_action(day, stream_history, commission_rate, portfolio) -> Acti
     
     # print(stream_history)
     # print(btc_prediction)
+    
+    return Hold()
 
 def main():
     global data
