@@ -88,7 +88,7 @@ def main():
 
     # n_smooth = nearest_neighbor_smoother(x, y, 300)
     n_smooth = y.ewm(halflife=14).mean().values #nearest_neighbor_smoother(x, y, 300)
-    n_smooth = gaussian_kernel_smoother(data.DATE, n_smooth, 10) #nearest_neighbor_smoother(x, y, 300)
+    n_smooth = gaussian_kernel_smoother(np.array(list(range(n_smooth.size))), n_smooth, 10) #nearest_neighbor_smoother(x, y, 300)
     plt.plot(n_smooth)
     # print(x.size)
     # print(n_smooth.size)
