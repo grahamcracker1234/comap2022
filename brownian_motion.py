@@ -199,4 +199,4 @@ data = pd.read_csv("data/full.csv")
 btc = [float(data.BTC.values[i]) for i in range(len(data))]
 gold = [float(data.GOLD_FULL.values[i]) for i in range(len(data))]
 # print(btc[0])
-simulateAllDays(gold)
+simulateAllDays(btc)
