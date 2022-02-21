@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
-def geometric_brownian_motion(data, day_num, horizon_length, num_scenarios):
+def geometric_brownian_motion(stock_data, day_num, horizon_length, num_scenarios):
     '''
     Parameters:
     stock_value: The stock value at this day
@@ -17,7 +17,6 @@ def geometric_brownian_motion(data, day_num, horizon_length, num_scenarios):
     b: array where we add randomness (stochastiness) to our model, it depends on the number of scenarios simulated
     W: the brownian path initiating from the stock_value 
     '''
-    stock_data = data[: day_num+1]
     stock_value = stock_data[day_num]
     dt = 1
     T = horizon_length
@@ -126,11 +125,11 @@ def testing_prediction(stock_data_btc, stock_data_gold):
     print("#"*25)
     print("\n"*3)
 
-def get_prediction(data, horizon_length, num_scenarios):
+def get_prediction(stock_data, horizon_length, num_scenarios):
     prediction_full = []
-    for day_num in range(0, len(data)-horizon_length, horizon_length):
+    for day_num in range(0, len(stock_data)-horizon_length, horizon_length):
         # bitcoin prediction
-        final_stock_prediction = geometric_brownian_motion(data=data, day_num=day_num, horizon_length=horizon_length, num_scenarios=num_scenarios)
+        final_stock_prediction = geometric_brownian_motion(stock_data=stock_data, day_num=day_num, horizon_length=horizon_length, num_scenarios=num_scenarios)
         prediction_full.extend(final_stock_prediction)
     return prediction_full
 
