@@ -4,6 +4,8 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
+from smoother import exponential_weighted_mean as ewm, gaussian_kernel_smoother as gks
+
 def geometric_brownian_motion(stream_history, horizon_length=14, num_scenarios=10):
     '''
     Parameters:
@@ -17,6 +19,7 @@ def geometric_brownian_motion(stream_history, horizon_length=14, num_scenarios=1
     b: array where we add randomness (stochastiness) to our model, it depends on the number of scenarios simulated
     W: the brownian path initiating from the stock_value 
     '''
+    np.random.seed(73)
     stock_value = stream_history.tail(1).values[0]
     dt = 1
     T = horizon_length
@@ -25,6 +28,8 @@ def geometric_brownian_motion(stream_history, horizon_length=14, num_scenarios=1
 
     # before calculating mu, need to calculate the return for each day 
     # returns = [(stream_history[i] - stream_history[i-1]) / stream_history[i-1] for i in range(1, len(stream_history))]
+    if stream_history.size > 4:
+        stream_history = np.array(stream_history[stream_history.size - 4:])
     returns = [stream_history[i] / stream_history[i - 1] - 1 for i in range(1, len(stream_history))]
     # print(f"{returns=}")
 

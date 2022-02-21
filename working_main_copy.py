@@ -105,8 +105,8 @@ def null_action_gold(day, stream_history, commission_rate, portfolio) -> Action:
 # Geometric Brownian Motion with Exponential Weighted Mean Action Heuristic
 def gbm_with_ewm_action(day, stream_history, commission_rate, portfolio) -> Action:
     currency_rate = get_currency_rate(stream_history)
-    buy_action = Buy(currency_rate, commission_rate, Currency(0, portfolio.usd, 0))
-    sell_action = Sell(currency_rate, commission_rate, Currency(0, portfolio.btc, 0))
+    buy_action = Buy(currency_rate, commission_rate, Currency(btc=portfolio.usd))
+    sell_action = Sell(currency_rate, commission_rate, Currency(btc=portfolio.btc))
 
     if day == 0: return buy_action
         
@@ -115,7 +115,7 @@ def gbm_with_ewm_action(day, stream_history, commission_rate, portfolio) -> Acti
     
     prediction_stream = np.concatenate((stream_history.BTC.values, btc_prediction), axis=None)
     smooth_stream = ewm(prediction_stream, 10)
-    smooth_stream = gks(np.array(list(range(smooth_stream.size))), smooth_stream)
+    # smooth_stream = gks(np.array(list(range(smooth_stream.size))), smooth_stream)
 
     min_indices = argrelextrema(smooth_stream, np.less)[0]
     local_mins = smooth_stream[min_indices]
