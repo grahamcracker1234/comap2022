@@ -4,8 +4,6 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
-data = pd.read_csv("data/full.csv", converters={"DATE": pd.to_datetime})
-
 def geometric_brownian_motion(data, day_num, horizon_length, num_scenarios):
     '''
     Parameters:
@@ -154,6 +152,7 @@ def show_prediction(data, horizon_length, num_scenarios, graph_title):
 
 
 if __name__ == "__main__":
+    data = pd.read_csv("data/full.csv", converters={"DATE": pd.to_datetime})
     stock_data_btc = [float(data.BTC.values[i]) for i in range(len(data))]
     stock_data_gold = [float(data.GOLD_FULL.values[i]) for i in range(len(data))]
     testing_prediction(stock_data_btc, stock_data_gold)
