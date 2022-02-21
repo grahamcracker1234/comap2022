@@ -17,15 +17,15 @@ def geometric_brownian_motion(data, day_num, horizon_length, num_scenarios):
     b: array where we add randomness (stochastiness) to our model, it depends on the number of scenarios simulated
     W: the brownian path initiating from the stock_value 
     '''
-    stock_data = data[day_num: day_num+horizon_length]
-    stock_value = stock_data[0]
+    stock_data = data[: day_num+1]
+    stock_value = stock_data[day_num]
     dt = 1
     T = horizon_length
     N = T/dt
     t = np.arange(1, int(N) + 1)
 
     # before calculating mu, need to calculate the return for each day 
-    returns = [(stock_data[i] - stock_data[i-1])/stock_data[i-1] for i in range(len(stock_data))]
+    returns = [(stock_data[i] - stock_data[i-1])/stock_data[i-1] for i in range(1,len(stock_data))]
     # print(f"returns: \n{returns}")
 
     # calculating mu --> it will be used in the drift component calculation
@@ -98,26 +98,26 @@ def geometric_brownian_motion(data, day_num, horizon_length, num_scenarios):
         final_Stock_Prediction.append(np.mean(predictions))
 
     final_Stock_Prediction.pop(0)
-    return stock_data, final_Stock_Prediction
+    return final_Stock_Prediction
 
 def testing_prediction(stock_data_btc, stock_data_gold):
-    stock_data_full_btc, stock_data_full_gold = [], []
     prediction_full_btc, prediction_full_gold = [], []
-    for day_num in range(0, len(data)-14, 14):
+    for day_num in range(0, len(stock_data_btc), 14):
         # bitcoin prediction
-        stock_data, final_stock_prediction = geometric_brownian_motion(data=stock_data_btc, day_num=day_num, horizon_length=14, num_scenarios=10)
-        stock_data_full_btc.extend(stock_data)
+        final_stock_prediction = geometric_brownian_motion(data=stock_data_btc, day_num=day_num, horizon_length=14, num_scenarios=10)
         prediction_full_btc.extend(final_stock_prediction)
 
         # gold prediction
-        stock_data, final_stock_prediction = geometric_brownian_motion(data=stock_data_gold, day_num=day_num, horizon_length=14, num_scenarios=10)
-        stock_data_full_gold.extend(stock_data)
+        final_stock_prediction = geometric_brownian_motion(data=stock_data_gold, day_num=day_num, horizon_length=14, num_scenarios=10)
         prediction_full_gold.extend(final_stock_prediction)
+    # remove extra predictions
+    for i in range(len(prediction_full_btc) - len(stock_data_btc)):
+        prediction_full_btc.pop(len(prediction_full_btc)-1)
+        prediction_full_gold.pop(len(prediction_full_btc)-1)
 
-    stock_data_full_btc, stock_data_full_gold = np.array(stock_data_full_btc), np.array(stock_data_full_gold)
     prediction_full_btc, prediction_full_gold = np.array(prediction_full_btc), np.array(prediction_full_gold)
-    rsme_btc = np.sqrt(np.mean((stock_data_full_btc- prediction_full_btc)**2))
-    rsme_gold = np.sqrt(np.mean((stock_data_full_gold- prediction_full_gold)**2))
+    rsme_btc = np.sqrt(np.mean((np.array(stock_data_btc) - prediction_full_btc)**2))
+    rsme_gold = np.sqrt(np.mean((np.array(stock_data_gold) - prediction_full_gold)**2))
     print("\n"*3)
     print("#"*25)
     print(f"Root Square Mean Error for Bitcoin: {rsme_btc}\n")
@@ -126,25 +126,21 @@ def testing_prediction(stock_data_btc, stock_data_gold):
     print("#"*25)
     print("\n"*3)
 
-def getPrediction(data, horizon_length, num_scenarios):
-    stock_data_full = []
+def get_prediction(data, horizon_length, num_scenarios):
     prediction_full = []
     for day_num in range(0, len(data)-horizon_length, horizon_length):
         # bitcoin prediction
-        stock_data, final_stock_prediction = geometric_brownian_motion(data=data, day_num=day_num, horizon_length=horizon_length, num_scenarios=num_scenarios)
-        stock_data_full.extend(stock_data)
+        final_stock_prediction = geometric_brownian_motion(data=data, day_num=day_num, horizon_length=horizon_length, num_scenarios=num_scenarios)
         prediction_full.extend(final_stock_prediction)
     return prediction_full
 
 def show_prediction(data, horizon_length, num_scenarios, graph_title):
-    stock_data_full = []
     prediction_full = []
     for day_num in range(0, len(data)-horizon_length, horizon_length):
         # bitcoin prediction
-        stock_data, final_stock_prediction = geometric_brownian_motion(data=data, day_num=day_num, horizon_length=horizon_length, num_scenarios=num_scenarios)
-        stock_data_full.extend(stock_data)
+        final_stock_prediction = geometric_brownian_motion(data=data, day_num=day_num, horizon_length=horizon_length, num_scenarios=num_scenarios)
         prediction_full.extend(final_stock_prediction)
-    plt.plot(stock_data_full, label=f"Original {graph_title} Data")
+    plt.plot(data, label=f"Original {graph_title} Data")
     plt.plot(prediction_full, label="Prediction Data")
     plt.title(f"{graph_title} Prediction")
     plt.legend()
