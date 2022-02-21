@@ -84,12 +84,13 @@ def main():
     np.set_printoptions(threshold=np.inf)
     x = data.DATE
     y = data.BTC
-    plt.plot(y)
+    plt.plot(y, label="Bitcoin Data")
 
     # n_smooth = nearest_neighbor_smoother(x, y, 300)
     n_smooth = y.ewm(halflife=14).mean().values #nearest_neighbor_smoother(x, y, 300)
     n_smooth = gaussian_kernel_smoother(np.array(list(range(n_smooth.size))), n_smooth, 10) #nearest_neighbor_smoother(x, y, 300)
-    plt.plot(n_smooth)
+    plt.plot(n_smooth, label="Gaussian Kernel Smoothing with Extrema")
+    plt.legend()
     # print(x.size)
     # print(n_smooth.size)
     
