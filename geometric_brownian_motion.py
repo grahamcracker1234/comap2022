@@ -128,6 +128,16 @@ def testing_prediction(stock_data_btc, stock_data_gold):
     print("#"*25)
     print("\n"*3)
 
+def getPrediction(data, horizon_length, num_scenarios):
+    stock_data_full = []
+    prediction_full = []
+    for day_num in range(0, len(data)-horizon_length, horizon_length):
+        # bitcoin prediction
+        stock_data, final_stock_prediction = geometric_brownian_motion(data=data, day_num=day_num, horizon_length=horizon_length, num_scenarios=num_scenarios)
+        stock_data_full.extend(stock_data)
+        prediction_full.extend(final_stock_prediction)
+    return prediction_full
+
 def show_prediction(data, horizon_length, num_scenarios, graph_title):
     stock_data_full = []
     prediction_full = []
