@@ -142,13 +142,9 @@ def show_prediction(data, horizon_length, num_scenarios, graph_title):
     plt.legend()
     plt.show()
 
-stock_data_btc = [float(data.BTC.values[i]) for i in range(len(data))]
-stock_data_gold = [float(data.GOLD_FULL.values[i]) for i in range(len(data))]
-testing_prediction(stock_data_btc, stock_data_gold)
-show_prediction(stock_data_btc, 14, 10, "Bitcoin")
 
-
-
-
-
-
+if __name__ == "__main__":
+    stock_data_btc = [float(data.BTC.values[i]) for i in range(len(data))]
+    stock_data_gold = [float(data.GOLD_FULL.values[i]) for i in range(len(data))]
+    testing_prediction(stock_data_btc, stock_data_gold)
+    show_prediction(stock_data_btc, 14, 10, "Bitcoin")
