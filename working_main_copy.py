@@ -1,6 +1,11 @@
 import pandas as pd
 import numpy as np
+import matplotlib.pyplot as plt
 from dataclasses import dataclass
+
+from scipy.signal import argrelextrema
+import geometric_brownian_motion as gbm
+from smoother import exponential_weighted_mean as ewm, gaussian_kernel_smoother as gks
 
 @dataclass
 class Currency:
@@ -63,7 +68,6 @@ def simulate(data, commission_rate, portfolio, action_model):
         print(f"\tUSD: {portfolio.usd}")
         print(f"\tBTC: {portfolio.btc}")
         print(f"\tGOLD: {portfolio.gold}")
-        print()
         
         # Get action based on action model
         action = action_model(day, stream_history, commission_rate, portfolio)
@@ -97,16 +101,89 @@ def null_action_gold(day, stream_history, commission_rate, portfolio) -> Action:
     if portfolio.usd == 0: return Hold()
     return Buy(currency_rate, commission_rate, Currency(0, 0, portfolio.usd))    
 
-# Geometric Brownian Motion with Exponential Weighted Mean
-def gbm_with_ewm(day, stream_history, commission_rate, portfolio) -> Action:
-    pass
+# Geometric Brownian Motion with Exponential Weighted Mean Action Heuristic
+def gbm_with_ewm_action(day, stream_history, commission_rate, portfolio) -> Action:
+    currency_rate = get_currency_rate(stream_history)
+    buy_action = Buy(currency_rate, commission_rate, Currency(0, portfolio.usd, 0))
+    sell_action = Sell(currency_rate, commission_rate, Currency(0, portfolio.btc, 0))
+
+    if day == 0: return buy_action
+    
+    if day % 25 != 0: return
+    
+    # currency_rate = get_currency_rate(stream_history)
+    btc_prediction = gbm.geometric_brownian_motion(stream_history.BTC, 100)
+    
+    prediction_stream = np.concatenate((stream_history.BTC.values, btc_prediction), axis=None)
+    smooth_stream = ewm(prediction_stream)
+    smooth_stream = gks(np.array(list(range(smooth_stream.size))), smooth_stream)
+
+    min_indices = argrelextrema(smooth_stream, np.less)[0]
+    local_mins = smooth_stream[min_indices]
+    
+    max_indices = argrelextrema(smooth_stream, np.greater)[0]
+    local_maxes = smooth_stream[max_indices]
+    
+    indices = np.concatenate((min_indices, max_indices), axis=None)
+    most_recent_past_index = max(filter(lambda i: i <= day, indices), default=None)
+    most_recent_future_index = min(filter(lambda i: i > day, indices), default=None)
+    
+    # plt.plot(data.BTC)
+    # plt.plot(prediction_stream)
+    # plt.plot(smooth_stream)
+    # plt.plot(max_indices, local_maxes, "ro")
+    # plt.plot(min_indices, local_mins, "bo")
+    # plt.axvline(x=day)
+    # plt.show()
+        
+    # print(f"{max_indices=}")
+    # print(f"{min_indices=}")
+    # print(f"{most_recent_past_index=}")
+    
+    if most_recent_past_index in min_indices and most_recent_past_index in max_indices: 
+        raise Exception("most_recent_past_index is both local_min and local_max")
+    
+    buy_action = Buy(currency_rate, commission_rate, Currency(0, portfolio.usd, 0))
+    if most_recent_past_index in min_indices:
+        min_index = most_recent_past_index
+        max_index = most_recent_future_index
+        
+        min_value = local_mins[min_index]
+        max_value = local_maxes[max_index]
+        
+        if abs(max_value - min_value) / most_recent_future_index < commission_rate.btc:
+            return Hold()
+        return buy_action
+    
+    if most_recent_past_index in max_indices:
+        min_index = most_recent_future_index
+        max_index = most_recent_past_index
+        
+        min_value = local_mins[min_index]
+        max_value = local_maxes[max_index]
+        
+        if abs(max_value - min_value) / most_recent_future_index < commission_rate.btc:
+            return Hold()
+        return sell_action
+    
+    # plt.plot(data.BTC)
+    # plt.plot(prediction_stream)
+    # plt.plot(smooth_stream)
+    # plt.plot(max_indices, local_max, "ro")
+    # plt.plot(min_indices, local_min, "bo")
+    # plt.axvline(x=day)
+    # plt.show()
+    
+    # print(stream_history)
+    # print(btc_prediction)
 
 def main():
-    data = pd.read_csv("data/full.csv")
+    global data
+    data = pd.read_csv("data/full.csv", converters={"DATE": pd.to_datetime})
     commission_rate = Currency(1, 0.02, 0.01)
     portfolio = Currency(1000, 0, 0)
     
-    portfolio_worth = simulate(data, commission_rate, portfolio, null_action_gold)
+    portfolio_worth = simulate(data, commission_rate, portfolio, gbm_with_ewm_action)
     print(f"Total USD: ${round(portfolio_worth, 2)}")
     
 if __name__ == "__main__":

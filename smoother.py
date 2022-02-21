@@ -3,8 +3,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 from scipy.signal import argrelextrema
 from datetime import datetime
-from sklearn.kernel_approximation import RBFSampler
-from sklearn import preprocessing
+# from sklearn.kernel_approximation import RBFSampler
+# from sklearn import preprocessing
 from timeit import timeit
 from itertools import zip_longest
 
@@ -60,11 +60,21 @@ def nearest_neighbor_smoother(x, y, n):
 #     return np.array(smooth)
 
 
-def gaussian_kernel_smoother(x, y, b):
+def exponential_weighted_mean(y, halflife=14):
+    return np.array(pd.Series(y).ewm(halflife=halflife).mean().values)
+
+# def gaussian_kernel_smoother(x, y, b=10):
+#     smooth = []
+#     for xi in x:
+#         new_xi = np.exp(-((x - xi).apply(lambda x: x.days) ** 2) / (2 * (b ** 2)))
+#         new_xi /= new_xi.sum()
+#         smooth.append((y * new_xi).sum())
+#     return np.array(smooth)
+
+def gaussian_kernel_smoother(x, y, b=10):
     smooth = []
     for xi in x:
-        new_xi = np.exp(-((x - xi).apply(lambda x: x.days)
-                        ** 2) / (2 * (b ** 2)))
+        new_xi = np.exp(-((x - xi) ** 2) / (2 * (b ** 2)))
         new_xi /= new_xi.sum()
         smooth.append((y * new_xi).sum())
     return np.array(smooth)
@@ -77,10 +87,11 @@ def main():
     plt.plot(y)
 
     # n_smooth = nearest_neighbor_smoother(x, y, 300)
-    n_smooth = np.array(pd.DataFrame(y).ewm(halflife="14 days", times=pd.DatetimeIndex(x)).mean().values) #nearest_neighbor_smoother(x, y, 300)
+    n_smooth = y.ewm(halflife=14).mean().values #nearest_neighbor_smoother(x, y, 300)
+    n_smooth = gaussian_kernel_smoother(data.DATE, n_smooth, 10) #nearest_neighbor_smoother(x, y, 300)
     plt.plot(n_smooth)
-    print(x.size)
-    print(n_smooth.size)
+    # print(x.size)
+    # print(n_smooth.size)
     
     # print(timeit(lambda: nearest_neighbor_smoother(x, y, 250), number=1))
     
